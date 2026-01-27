@@ -3,6 +3,154 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" 
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // ignore this warning because we use the prisma client v6, this warning is for v7
 }
+
+enum BookingStatus {
+  UNPAID
+  PENDING
+  PAID
+  EXPIRED
+  CONFIRMED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model Station {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  city      String
+
+  originRoutes      Route[] @relation("OriginStation")
+  destinationRoutes Route[] @relation("DestinationStation")
+
+  createdAt DateTime @default(now())
+}
+
+model Train {
+  id         String  @id @default(uuid())
+  name       String
+  code       String  @unique
+  totalSeats Int
+
+  seats      Seat[]
+  schedules  Schedule[]
+
+  createdAt DateTime @default(now())
+}
+
+model Route {
+  id                   String @id @default(uuid())
+  originStationId      String
+  destinationStationId String
+
+  originStation      Station @relation("OriginStation", fields: [originStationId], references: [id])
+  destinationStation Station @relation("DestinationStation", fields: [destinationStationId], references: [id])
+
+  schedules Schedule[]
+
+  createdAt DateTime @default(now())
+}
+
+model Schedule {
+  id            String   @id @default(uuid())
+  trainId       String
+  routeId       String
+  departureTime DateTime
+  arrivalTime   DateTime
+  price         Int
+
+  train    Train @relation(fields: [trainId], references: [id])
+  route    Route @relation(fields: [routeId], references: [id])
+  
+  bookingSeats BookingSeat[]
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+
+  @@index([departureTime])
+}
+
+model Seat {
+  id        String @id @default(uuid())
+  trainId  String
+  number   String
+
+  train         Train         @relation(fields: [trainId], references: [id])
+  bookingSeats  BookingSeat[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([trainId, number])
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  userId     String
+  scheduleId String
+  status     BookingStatus
+  expiresAt  DateTime
+  totalPrice Int
+
+  user     User     @relation(fields: [userId], references: [id])
+  schedule Schedule @relation(fields: [scheduleId], references: [id])
+  bookingSeats     BookingSeat[]
+  payment   Payment?
+
+  createdAt DateTime @default(now())
+}
+
+model BookingSeat {
+  id         String @id @default(uuid())
+  bookingId  String
+  seatId     String
+  scheduleId String
+
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  seat     Seat     @relation(fields: [seatId], references: [id])
+  schedule Schedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([scheduleId, seatId])
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  bookingId String        @unique
+  amount    Int
+  status    PaymentStatus
+  payment_url String?
+  paidAt    DateTime?
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  first_name  String
+  last_name   String?
+  createdAt   DateTime @default(now())
+
+  refreshTokens RefreshToken[]
+  bookings  Booking[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+}
+
