@@ -23,5 +23,6 @@ app.use(routes);
 
 app.use(errorHandler);
 cron.schedule("* * * * *", expireBookings);
+console.log("NODE_ENV:", process.env.NODE_ENV);
 
 export default app;
