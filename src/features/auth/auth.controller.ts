@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import {
   loginService,
   logoutService,
@@ -16,26 +16,34 @@ export const registerUser = async (req: Request, res: Response) => {
   });
 };
 
-export const loginUser = async (req: Request, res: Response) => {
-  const data = await loginService(req.body);
-  res.cookie("access_token", data.token.accessToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60,
-  });
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const data = await loginService(req.body);
+    res.cookie("access_token", data.token.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60,
+    });
 
-  res.cookie("refresh_token", data.token.refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  });
+    res.cookie("refresh_token", data.token.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
 
-  return res.status(200).json({
-    success: true,
-    data,
-  });
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const logout = async (req: Request, res: Response) => {

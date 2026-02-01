@@ -8,10 +8,10 @@ import cron from "node-cron";
 import { expireBookings } from "./features/booking/jobs/expire-booking.job";
 
 const app = express();
-
+console.log("NODE_ENV:", process.env.FE_URL!.split(","));
 app.use(
   cors({
-    origin: process.env.FE_URL!,
+    origin: process.env.FE_URL!.split(","),
     credentials: true,
   }),
 );
