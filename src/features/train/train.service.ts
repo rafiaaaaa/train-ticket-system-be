@@ -75,27 +75,29 @@ export const getTrainSchedulesService = async (params: {
 }) => {
   const { from, to, date, passengers } = params;
 
-  if (!from || !to || !date) {
-    throw new Error("from, to, and date are required");
+  const hasFilters = Boolean(from && to && date);
+
+  if ((from || to || date) && !hasFilters) {
+    throw new Error("from, to, and date must be provided together");
   }
 
-  const passengerCount = passengers ? parseInt(passengers, 10) : undefined;
+  const passengerCount = passengers
+    ? Number.parseInt(passengers, 10)
+    : undefined;
 
   const schedules = await prisma.schedule.findMany({
-    where: {
-      route: {
-        originStation: {
-          code: from,
-        },
-        destinationStation: {
-          code: to,
-        },
-      },
-      departureTime: {
-        gte: startOfDay(new Date(date)),
-        lte: endOfDay(new Date(date)),
-      },
-    },
+    where: hasFilters
+      ? {
+          route: {
+            originStation: { code: from! },
+            destinationStation: { code: to! },
+          },
+          departureTime: {
+            gte: startOfDay(date!),
+            lte: endOfDay(date!),
+          },
+        }
+      : undefined,
     include: {
       train: true,
       route: {
@@ -105,9 +107,7 @@ export const getTrainSchedulesService = async (params: {
         },
       },
       _count: {
-        select: {
-          bookingSeats: true,
-        },
+        select: { bookingSeats: true },
       },
     },
     orderBy: {
