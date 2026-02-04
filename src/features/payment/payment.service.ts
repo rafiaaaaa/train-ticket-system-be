@@ -45,6 +45,9 @@ export async function payBooking({
       last_name: user?.last_name,
       email: user?.email,
     },
+    callbacks: {
+      finish: "https://train-ticket-system-fe.vercel.app/booking/" + bookingId,
+    },
   });
 
   const payment = await prisma.$transaction(async (tx: any) => {
